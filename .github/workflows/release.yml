@@ -99,7 +99,7 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Install musl tools
-        run: sudo apt-get update && sudo apt-get install -y musl-tools gcc-multilib
+        run: sudo apt-get update && sudo apt-get install -y musl-tools gcc-multilib cmake
 
       - name: Build target
         uses: actions-rs/cargo@v1
@@ -117,7 +117,9 @@ jobs:
       - name: Publish
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
+        # TODO: if any of the build step fails, the release should be deleted.
         with:
             files: 'testmest*'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
