@@ -90,7 +90,7 @@ jobs:
           profile: minimal
           override: true
       - name: Install musl tools
-        run: sudo apt-get install -y musl-tools
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
 
       - name: Build target
         uses: actions-rs/cargo@v1
@@ -103,7 +103,7 @@ jobs:
         run: |
           strip target/${{ matrix.target }}/release/testmest
           cd target/${{ matrix.target }}/release          
-          tar czvf ../../../testmest-${{ matrix.name }}.tar.gz testmest
+          tar czvf ../../../testmest-${{ matrix.target }}.tar.gz testmest
           cd -
       - name: Publish
         uses: softprops/action-gh-release@v1
