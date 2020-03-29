@@ -104,7 +104,7 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          strip target/${{ matrix.target }}/release/testmest
+          #strip target/${{ matrix.target }}/release/testmest
           cd target/${{ matrix.target }}/release          
           tar czvf ../../../testmest-${{ matrix.target }}.tar.gz testmest
           cd -
