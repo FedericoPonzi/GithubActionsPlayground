@@ -89,7 +89,15 @@ jobs:
           toolchain: stable
           profile: minimal
           override: true
-        
+      - name: Install musl tools
+        run: sudo apt-get install -y musl-tools
+
+      - name: Build target
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --target ${{ matrix.target }}
+
       - name: Package
         shell: bash
         run: |
