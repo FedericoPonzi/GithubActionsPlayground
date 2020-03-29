@@ -90,9 +90,9 @@ jobs:
           profile: minimal
           override: true
           target: ${{ matrix.target }}
-          
+
       - name: Install musl tools
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
+        run: sudo apt-get update && sudo apt-get install -y musl-tools gcc-multilib
 
       - name: Build target
         uses: actions-rs/cargo@v1
