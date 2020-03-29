@@ -1,60 +1,106 @@
-on:
-  push:
-    # Sequence of patterns matched against refs/tags
-    tags:
-    - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+name: CI
 
-name: Upload Release Asset
+on:
+  pull_request:
+  push:
+    branches:
+      - master
 
 jobs:
-  build:
-    name: Upload Release Asset
+  style:
+    name: Check Style
     runs-on: ubuntu-latest
-    strategy:
-          matrix:
-            build: [stable, beta, nightly]
-            include:
-              - build: beta
-                rust: beta
-              - build: nightly
-                rust: nightly
-                benches: true
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt
+          profile: minimal
+          override: true
+
+      - name: cargo fmt -- --check
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+
+  test:
+    name: Test
+    needs: [style]
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        build: [stable, beta, nightly]
+        include:
+          - build: beta
+            rust: beta
+          - build: nightly
+            rust: nightly
+            benches: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
       - name: Install rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ matrix.rust || 'stable' }}
           profile: minimal
           override: true
+
       - name: Build debug
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: "--release"
-      - name: Zip project # This would actually build your project, using zip for an example artifact
+          args: ${{ matrix.features }}
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: ${{ matrix.features }}
+
+      - name: Test all benches
+        if: matrix.benches
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --benches ${{ matrix.features }}
+  deploy:
+    name: deploy
+    needs: [test]
+    runs-on: ubuntu-latest
+    strategy: 
+      matrix:
+        target: [aarch64-unknown-linux-gnu, arm-unknown-linux-gnueabi, armv7-unknown-linux-gnueabihf, i686-unknown-linux-gnu, i686-unknown-linux-musl, mips-unknown-linux-gnu, mips64-unknown-linux-gnuabi64, mips64el-unknown-linux-gnuabi64, mipsel-unknown-linux-gnu, powerpc-unknown-linux-gnu, powerpc64-unknown-linux-gnu, powerpc64le-unknown-linux-gnu, x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+        
+      - name: Package
+        shell: bash
         run: |
-          ls -l . &&
-          ls -l target/release && 
-          tar -czf my-artifact.tar.gz *
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+          strip target/${{ matrix.target }}/release/testmest
+          cd target/${{ matrix.target }}/release          
+          tar czvf ../../../testmest-${{ matrix.name }}.tar.gz testmest
+          cd -
+      - name: Publish
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+            files: 'testmest*'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }} 
-          release_name: Horust ${{ github.ref }} 
-          draft: false
-          prerelease: true
-      - name: Upload Release Asset
-        id: upload-release-asset 
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: ./my-artifact.tar.gz
-          asset_name: my-artifact.tar.gz
-          asset_content_type: application/gzip
