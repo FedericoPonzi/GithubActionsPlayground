@@ -9,7 +9,7 @@ ARG IMAGE_NAME
 RUN echo "Running cargo build with params: $CARGO_PARAMS" && cargo build --release $CARGO_PARAMS
 
 FROM debian:buster-slim
-COPY --from=builder /usr/src/myapp/target/release/test /sbin/test
+COPY --from=builder /usr/src/myapp/target/release/testmest /sbin/test
 RUN mkdir -p /etc/horust/services/ && apt-get update && apt-get install bash
 ENV HORUST_LOG info
 ENV GIT_COMMIT=$GIT_COMMIT
